@@ -1,0 +1,166 @@
+<%- include('partials/head') %>
+<div class="page-title">
+  <h1>Tableau de bord</h1>
+  <p>Bonjour <strong><%= currentUser.name %></strong> (<%= currentUser.email %>).</p>
+</div>
+
+<section aria-label="Chiffres clés" class="stats">
+  <div class="stat"><span class="stat-value"><%= stats.catways %></span><span class="stat-label">catways</span></div>
+  <div class="stat"><span class="stat-value"><%= stats.reservations %></span><span class="stat-label">réservations</span></div>
+  <div class="stat"><span class="stat-value"><%= stats.current %></span><span class="stat-label">bateaux à quai aujourd'hui</span></div>
+  <div class="stat"><span class="stat-value"><%= stats.free %></span><span class="stat-label">catways libres aujourd'hui</span></div>
+</section>
+
+<p class="quick-links">
+  <a class="btn" href="/catways">Voir la liste des catways</a>
+  <a class="btn" href="/reservations">Voir la liste des réservations</a>
+</p>
+
+<!-- Les formulaires ci-dessous appellent l'API avec la bonne méthode HTTP
+     (POST, PUT, PATCH, DELETE) grâce au script /js/dashboard.js. -->
+
+<h2 id="catways">Catways</h2>
+<div class="grid">
+  <form class="card form api-form" data-method="POST" data-endpoint="/catways">
+    <h3>Créer un catway</h3>
+    <label for="cc-number">Numéro</label>
+    <input id="cc-number" name="catwayNumber" type="number" min="1" step="1" required>
+    <label for="cc-type">Type</label>
+    <select id="cc-type" name="type" required>
+      <% catwayTypes.forEach((t) => { %><option value="<%= t %>"><%= t %></option><% }) %>
+    </select>
+    <label for="cc-state">Description de l'état</label>
+    <input id="cc-state" name="catwayState" type="text" maxlength="500" required>
+    <button class="btn" type="submit">Créer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form api-form" data-method="PATCH" data-endpoint="/catways/{catwayNumber}">
+    <h3>Modifier l'état d'un catway</h3>
+    <label for="uc-number">Numéro du catway</label>
+    <input id="uc-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <label for="uc-state">Nouvelle description de l'état</label>
+    <input id="uc-state" name="catwayState" type="text" maxlength="500" required>
+    <button class="btn" type="submit">Modifier</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form api-form" data-method="DELETE" data-endpoint="/catways/{catwayNumber}"
+        data-confirm="Supprimer ce catway et toutes ses réservations ?">
+    <h3>Supprimer un catway</h3>
+    <label for="dc-number">Numéro du catway</label>
+    <input id="dc-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <button class="btn btn-danger" type="submit">Supprimer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form" method="get" action="/recherche/catway">
+    <h3>Afficher les détails d'un catway</h3>
+    <label for="sc-number">Numéro du catway</label>
+    <input id="sc-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <button class="btn" type="submit">Afficher</button>
+  </form>
+</div>
+
+<datalist id="catway-numbers">
+  <% catways.forEach((c) => { %><option value="<%= c.catwayNumber %>"><%= c.type %> – <%= c.catwayState %></option><% }) %>
+</datalist>
+
+<h2 id="reservations">Réservations</h2>
+<div class="grid">
+  <form class="card form api-form" data-method="POST" data-endpoint="/catways/{catwayNumber}/reservations">
+    <h3>Enregistrer une réservation</h3>
+    <label for="cr-number">Numéro du catway</label>
+    <input id="cr-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <label for="cr-client">Nom du client</label>
+    <input id="cr-client" name="clientName" type="text" maxlength="100" required>
+    <label for="cr-boat">Nom du bateau</label>
+    <input id="cr-boat" name="boatName" type="text" maxlength="100" required>
+    <label for="cr-in">Date d'arrivée</label>
+    <input id="cr-in" name="checkIn" type="date" required>
+    <label for="cr-out">Date de départ</label>
+    <input id="cr-out" name="checkOut" type="date" required>
+    <button class="btn" type="submit">Enregistrer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form api-form" data-method="DELETE"
+        data-endpoint="/catways/{catwayNumber}/reservations/{idReservation}"
+        data-confirm="Supprimer cette réservation ?">
+    <h3>Supprimer une réservation</h3>
+    <label for="dr-number">Numéro du catway</label>
+    <input id="dr-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <label for="dr-id">Identifiant de la réservation</label>
+    <input id="dr-id" name="idReservation" type="text" pattern="[0-9a-fA-F]{24}" required>
+    <button class="btn btn-danger" type="submit">Supprimer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form" method="get" action="/recherche/reservation">
+    <h3>Afficher les détails d'une réservation</h3>
+    <label for="sr-number">Numéro du catway</label>
+    <input id="sr-number" name="catwayNumber" type="number" min="1" step="1" required list="catway-numbers">
+    <label for="sr-id">Identifiant de la réservation</label>
+    <input id="sr-id" name="idReservation" type="text" pattern="[0-9a-fA-F]{24}" required>
+    <button class="btn" type="submit">Afficher</button>
+  </form>
+</div>
+<p class="hint">Les identifiants des réservations figurent dans la <a href="/reservations">liste des réservations</a>.</p>
+
+<h2 id="utilisateurs">Utilisateurs</h2>
+<div class="grid">
+  <form class="card form api-form" data-method="POST" data-endpoint="/users">
+    <h3>Créer un utilisateur</h3>
+    <label for="cu-name">Nom</label>
+    <input id="cu-name" name="name" type="text" maxlength="100" required>
+    <label for="cu-email">Adresse e-mail</label>
+    <input id="cu-email" name="email" type="email" required>
+    <label for="cu-password">Mot de passe (8 caractères minimum)</label>
+    <input id="cu-password" name="password" type="password" minlength="8" autocomplete="new-password" required>
+    <button class="btn" type="submit">Créer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form api-form" data-method="PUT" data-endpoint="/users/{id}">
+    <h3>Modifier un utilisateur</h3>
+    <label for="uu-id">Identifiant de l'utilisateur</label>
+    <input id="uu-id" name="id" type="text" pattern="[0-9a-fA-F]{24}" required list="user-ids">
+    <p class="hint">Laissez vide les champs à ne pas modifier.</p>
+    <label for="uu-name">Nouveau nom</label>
+    <input id="uu-name" name="name" type="text" maxlength="100">
+    <label for="uu-email">Nouvelle adresse e-mail</label>
+    <input id="uu-email" name="email" type="email">
+    <label for="uu-password">Nouveau mot de passe</label>
+    <input id="uu-password" name="password" type="password" minlength="8" autocomplete="new-password">
+    <button class="btn" type="submit">Modifier</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+
+  <form class="card form api-form" data-method="DELETE" data-endpoint="/users/{id}"
+        data-confirm="Supprimer cet utilisateur ?">
+    <h3>Supprimer un utilisateur</h3>
+    <label for="du-id">Identifiant de l'utilisateur</label>
+    <input id="du-id" name="id" type="text" pattern="[0-9a-fA-F]{24}" required list="user-ids">
+    <button class="btn btn-danger" type="submit">Supprimer</button>
+    <output class="result" aria-live="polite"></output>
+  </form>
+</div>
+
+<datalist id="user-ids">
+  <% users.forEach((u) => { %><option value="<%= u._id %>"><%= u.name %> – <%= u.email %></option><% }) %>
+</datalist>
+
+<h3>Comptes existants</h3>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Nom</th><th scope="col">E-mail</th><th scope="col">Identifiant</th></tr></thead>
+    <tbody>
+      <% users.forEach((u) => { %>
+        <tr><td><%= u.name %></td><td><%= u.email %></td><td><code><%= u._id %></code></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<script src="/js/dashboard.js" defer></script>
+<%- include('partials/foot') %>

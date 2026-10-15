@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<section class="card narrow">
+  <h1><%= title %></h1>
+  <p class="alert alert-error"><%= message %></p>
+  <p>
+    <% if (currentUser) { %>
+      <a class="btn" href="/tableau-de-bord">Retour au tableau de bord</a>
+    <% } else { %>
+      <a class="btn" href="/">Retour à l'accueil</a>
+    <% } %>
+  </p>
+</section>
+<%- include('partials/foot') %>

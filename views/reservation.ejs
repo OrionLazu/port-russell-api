@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<nav class="breadcrumb" aria-label="Fil d'Ariane">
+  <a href="/tableau-de-bord">Tableau de bord</a> › <a href="/reservations">Réservations</a> › <%= reservation.boatName %>
+</nav>
+<h1>Réservation du bateau « <%= reservation.boatName %> »</h1>
+<section class="card">
+  <dl class="details">
+    <dt>Identifiant</dt><dd><code><%= reservation._id %></code></dd>
+    <dt>Catway</dt><dd><a href="/catways/<%= reservation.catwayNumber %>">n°<%= reservation.catwayNumber %></a></dd>
+    <dt>Client</dt><dd><%= reservation.clientName %></dd>
+    <dt>Bateau</dt><dd><%= reservation.boatName %></dd>
+    <dt>Arrivée</dt><dd><%= formatDate(reservation.checkIn, true) %></dd>
+    <dt>Départ</dt><dd><%= formatDate(reservation.checkOut, true) %></dd>
+    <dt>Durée</dt><dd><%= Math.ceil((new Date(reservation.checkOut) - new Date(reservation.checkIn)) / 86400000) %> jour(s)</dd>
+  </dl>
+</section>
+<%- include('partials/foot') %>
