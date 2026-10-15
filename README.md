@@ -121,6 +121,13 @@ npm run docs
 
 Génère la documentation JSDoc dans `docs/jsdoc`, servie par l'application sur `/jsdoc`.
 
+## Déploiement
+
+L'application est déployée sur [Render](https://render.com) à partir du fichier `render.yaml`
+(service web Node.js, déploiement automatique à chaque fusion sur `main`) et utilise
+une base MongoDB Atlas. Au démarrage, le serveur se connecte à MongoDB puis lance les tests,
+visibles dans les journaux de Render.
+
 ## Auteur
 
 Mohamed IDJEDAINI — devoir CEF « Créer une API pour le port de plaisance Russell ».
