@@ -1,0 +1,36 @@
+{
+  "name": "port-russell-api",
+  "version": "1.0.0",
+  "description": "API privée de gestion des catways et des réservations du port de plaisance Russell",
+  "main": "server.js",
+  "private": true,
+  "author": "Mohamed IDJEDAINI",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "mocha",
+    "seed": "node scripts/seed.js",
+    "docs": "jsdoc -c jsdoc.json"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "ejs": "^3.1.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.2"
+  },
+  "devDependencies": {
+    "jsdoc": "^4.0.5",
+    "mocha": "^11.8.0",
+    "mongodb-memory-server": "^11.3.0",
+    "supertest": "^7.3.1"
+  }
+}
