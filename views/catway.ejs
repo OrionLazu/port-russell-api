@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+<nav class="breadcrumb" aria-label="Fil d'Ariane">
+  <a href="/tableau-de-bord">Tableau de bord</a> › <a href="/catways">Catways</a> › n°<%= catway.catwayNumber %>
+</nav>
+<h1>Catway n°<%= catway.catwayNumber %></h1>
+<section class="card">
+  <dl class="details">
+    <dt>Numéro</dt><dd><%= catway.catwayNumber %></dd>
+    <dt>Type</dt><dd><span class="badge badge-<%= catway.type %>"><%= catway.type %></span></dd>
+    <dt>État</dt><dd><%= catway.catwayState %></dd>
+    <dt>Identifiant MongoDB</dt><dd><code><%= catway._id %></code></dd>
+    <% if (catway.updatedAt) { %>
+      <dt>Dernière modification</dt><dd><%= formatDate(catway.updatedAt, true) %></dd>
+    <% } %>
+  </dl>
+</section>
+<h2>Réservations de ce catway</h2>
+<% if (reservations.length) { %>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">Client</th><th scope="col">Bateau</th><th scope="col">Arrivée</th><th scope="col">Départ</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+      </thead>
+      <tbody>
+        <% reservations.forEach((r) => { %>
+          <tr>
+            <td><%= r.clientName %></td>
+            <td><%= r.boatName %></td>
+            <td><%= formatDate(r.checkIn) %></td>
+            <td><%= formatDate(r.checkOut) %></td>
+            <td><a href="/catways/<%= r.catwayNumber %>/reservations/<%= r._id %>">Détails</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <p>Aucune réservation sur ce catway.</p>
+<% } %>
+<%- include('partials/foot') %>

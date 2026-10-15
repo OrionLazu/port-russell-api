@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/pageController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/pageController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file Contrôleur des pages HTML (accueil, tableau de bord, documentation).
+ * @module controllers/pageController
+ */
+
+const userService = require('../services/userService');
+const catwayService = require('../services/catwayService');
+const reservationService = require('../services/reservationService');
+const { CATWAY_TYPES } = require('../models/Catway');
+
+/** Messages affichés sur l'accueil selon le paramètre d'URL reçu. */
+const HOME_MESSAGES = {
+  session: { error: 'Votre session a expiré ou vous n’êtes pas connecté.' },
+  deconnexion: { info: 'Vous êtes déconnecté. À bientôt !' },
+};
+
+/**
+ * GET / — page d'accueil avec présentation et formulaire de connexion.
+ * Un utilisateur déjà connecté est envoyé directement sur son tableau de bord.
+ *
+ * @param {express.Request} req - Requête Express.
+ * @param {express.Response} res - Réponse Express.
+ */
+function home(req, res) {
+  if (req.user) {
+    return res.redirect('/tableau-de-bord');
+  }
+  let message = {};
+  if (req.query.erreur === 'session') message = HOME_MESSAGES.session;
+  else if (req.query.deconnexion) message = HOME_MESSAGES.deconnexion;
+  res.render('index', { title: 'Accueil', email: '', ...message });
+}
+
+/**
+ * GET /tableau-de-bord — tableau de bord de l'utilisateur connecté.
+ *
+ * @param {express.Request} req - Requête Express.
+ * @param {express.Response} res - Réponse Express.
+ */
+async function dashboard(req, res) {
+  const [users, catways, reservations] = await Promise.all([
+    userService.listUsers(),
+    catwayService.listCatways(),
+    reservationService.listReservations(),
+  ]);
+  const now = new Date();
+  const current = reservations.filter((r) => r.checkIn &lt;= now &amp;&amp; r.checkOut >= now);
+  res.render('dashboard', {
+    title: 'Tableau de bord',
+    users,
+    catways,
+    catwayTypes: CATWAY_TYPES,
+    stats: {
+      catways: catways.length,
+      reservations: reservations.length,
+      current: current.length,
+      free: catways.length - new Set(current.map((r) => r.catwayNumber)).size,
+    },
+  });
+}
+
+/**
+ * GET /recherche/catway — formulaire « détails d'un catway » du tableau de bord.
+ *
+ * @param {express.Request} req - Requête Express.
+ * @param {express.Response} res - Réponse Express.
+ */
+function findCatway(req, res) {
+  const number = catwayService.parseCatwayNumber(req.query.catwayNumber);
+  res.redirect(`/catways/${number}`);
+}
+
+/**
+ * GET /recherche/reservation — formulaire « détails d'une réservation » du tableau de bord.
+ *
+ * @param {express.Request} req - Requête Express.
+ * @param {express.Response} res - Réponse Express.
+ */
+function findReservation(req, res) {
+  const number = catwayService.parseCatwayNumber(req.query.catwayNumber);
+  const id = encodeURIComponent(String(req.query.idReservation || '').trim());
+  res.redirect(`/catways/${number}/reservations/${id}`);
+}
+
+/**
+ * GET /documentation — documentation de l'API.
+ *
+ * @param {express.Request} req - Requête Express.
+ * @param {express.Response} res - Réponse Express.
+ */
+function documentation(req, res) {
+  res.render('documentation', {
+    title: "Documentation de l'API",
+    baseUrl: `${req.protocol}://${req.get('host')}`,
+  });
+}
+
+module.exports = { home, dashboard, findCatway, findReservation, documentation };
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-config_db.html">config/db</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_catwayController.html">controllers/catwayController</a></li><li><a href="module-controllers_pageController.html">controllers/pageController</a></li><li><a href="module-controllers_reservationController.html">controllers/reservationController</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-middlewares_auth.html">middlewares/auth</a></li><li><a href="module-middlewares_errorHandler.html">middlewares/errorHandler</a></li><li><a href="module-models_Catway.html">models/Catway</a></li><li><a href="module-models_Reservation.html">models/Reservation</a></li><li><a href="module-models_User.html">models/User</a></li><li><a href="module-routes_catways.html">routes/catways</a></li><li><a href="module-routes_pages.html">routes/pages</a></li><li><a href="module-routes_reservations.html">routes/reservations</a></li><li><a href="module-routes_users.html">routes/users</a></li><li><a href="module-scripts_seed.html">scripts/seed</a></li><li><a href="module-server.html">server</a></li><li><a href="module-services_catwayService.html">services/catwayService</a></li><li><a href="module-services_errors.html">services/errors</a></li><li><a href="module-services_reservationService.html">services/reservationService</a></li><li><a href="module-services_userService.html">services/userService</a></li><li><a href="module-tests_setup.html">tests/setup</a></li></ul><h3>Classes</h3><ul><li><a href="module-services_errors-ServiceError.html">ServiceError</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

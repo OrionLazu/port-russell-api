@@ -1,0 +1,16 @@
+{
+  "source": {
+    "include": ["app.js", "server.js", "config", "models", "services", "middlewares", "controllers", "routes", "scripts", "tests/setup.js"],
+    "includePattern": ".+\\.js$"
+  },
+  "opts": {
+    "destination": "docs/jsdoc",
+    "recurse": true,
+    "readme": "README.md",
+    "encoding": "utf8"
+  },
+  "templates": {
+    "default": { "includeDate": false }
+  },
+  "plugins": ["plugins/markdown"]
+}

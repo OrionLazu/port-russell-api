@@ -1,0 +1,27 @@
+# Déploiement sur Render (New > Blueprint) : un service web Node.js gratuit.
+services:
+  - type: web
+    name: port-russell-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm install --include=dev && npm run docs
+    startCommand: npm start
+    healthCheckPath: /documentation
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_URI_TEST
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: RUN_TESTS_ON_START
+        value: "true"
