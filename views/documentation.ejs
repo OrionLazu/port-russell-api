@@ -1,0 +1,252 @@
+<%- include('partials/head') %>
+<div class="doc">
+  <aside class="doc-toc" aria-label="Sommaire">
+    <h2>Sommaire</h2>
+    <ol>
+      <li><a href="#vue-ensemble">Vue d'ensemble</a></li>
+      <li><a href="#tutoriel">Tutoriel</a></li>
+      <li><a href="#exemples">Exemples</a></li>
+      <li><a href="#glossaire">Glossaire</a></li>
+    </ol>
+    <p><a href="/jsdoc/index.html">Documentation technique du code (JSDoc)</a></p>
+  </aside>
+
+  <article class="doc-body">
+    <h1>Documentation de l'API du port de plaisance Russell</h1>
+
+    <!-- ===================================================== -->
+    <section id="vue-ensemble">
+      <h2>1. Vue d'ensemble</h2>
+      <p>
+        L'API du port de plaisance Russell est une API <strong>REST privée</strong> qui permet
+        à la capitainerie de gérer ses <strong>catways</strong> et les <strong>réservations</strong>
+        de ces catways. Elle est construite avec Node.js, Express et MongoDB.
+      </p>
+      <h3>Principes</h3>
+      <ul>
+        <li>Les routes sont centrées sur les ressources : <code>/catways</code>, <code>/catways/:id/reservations</code> et <code>/users</code>.</li>
+        <li>La méthode HTTP exprime l'intention : <code>GET</code> lit, <code>POST</code> crée, <code>PUT</code> remplace, <code>PATCH</code> modifie en partie, <code>DELETE</code> supprime.</li>
+        <li>Les données sont échangées en JSON (<code>Content-Type: application/json</code>).</li>
+        <li>Toutes les routes de données sont <strong>privées</strong> : il faut être connecté.</li>
+        <li>Le paramètre <code>:id</code> d'un catway est son <strong>numéro</strong> (<code>catwayNumber</code>) ; celui d'une réservation ou d'un utilisateur est son identifiant MongoDB (<code>_id</code>).</li>
+      </ul>
+
+      <h3>Authentification</h3>
+      <p>
+        <code>POST /login</code> vérifie l'e-mail et le mot de passe puis délivre un jeton
+        <abbr title="JSON Web Token">JWT</abbr> valable 24 heures. Le jeton est déposé dans un
+        cookie <code>httpOnly</code> : un navigateur reste connecté sans renvoyer ses identifiants.
+        Un autre client (Postman, script…) peut aussi l'envoyer dans l'en-tête
+        <code>Authorization: Bearer &lt;jeton&gt;</code>.
+      </p>
+
+      <h3>Routes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Méthode</th><th scope="col">Route</th><th scope="col">Action</th><th scope="col">Accès</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method post">POST</span></td><td><code>/login</code></td><td>Se connecter</td><td>Public</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/logout</code></td><td>Se déconnecter</td><td>Public</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/catways</code></td><td>Lister les catways</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/catways/:id</code></td><td>Détails d'un catway</td><td>Privé</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/catways</code></td><td>Créer un catway</td><td>Privé</td></tr>
+            <tr><td><span class="method put">PUT</span></td><td><code>/catways/:id</code></td><td>Remplacer un catway (tous les champs)</td><td>Privé</td></tr>
+            <tr><td><span class="method patch">PATCH</span></td><td><code>/catways/:id</code></td><td>Modifier l'état d'un catway</td><td>Privé</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/catways/:id</code></td><td>Supprimer un catway et ses réservations</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/catways/:id/reservations</code></td><td>Lister les réservations d'un catway</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/catways/:id/reservations/:idReservation</code></td><td>Détails d'une réservation</td><td>Privé</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/catways/:id/reservations</code></td><td>Prendre une réservation</td><td>Privé</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/catways/:id/reservations/:idReservation</code></td><td>Supprimer une réservation</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/reservations</code></td><td>Lister toutes les réservations</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/users</code></td><td>Lister les utilisateurs</td><td>Privé</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/users/:id</code></td><td>Détails d'un utilisateur</td><td>Privé</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/users</code></td><td>Créer un utilisateur</td><td>Privé</td></tr>
+            <tr><td><span class="method put">PUT</span></td><td><code>/users/:id</code></td><td>Modifier un utilisateur</td><td>Privé</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/users/:id</code></td><td>Supprimer un utilisateur</td><td>Privé</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">Les routes <code>/catway/:id/reservations…</code> (au singulier) sont aussi acceptées, comme écrit dans le cahier des charges.</p>
+
+      <h3>Codes de réponse</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Code</th><th scope="col">Signification</th></tr></thead>
+          <tbody>
+            <tr><td>200</td><td>Succès</td></tr>
+            <tr><td>201</td><td>Ressource créée (l'en-tête <code>Location</code> indique son adresse)</td></tr>
+            <tr><td>400</td><td>Données invalides : le champ <code>details</code> précise les erreurs</td></tr>
+            <tr><td>401</td><td>Non connecté, ou session expirée</td></tr>
+            <tr><td>403</td><td>Action interdite (par exemple supprimer son propre compte)</td></tr>
+            <tr><td>404</td><td>Ressource introuvable</td></tr>
+            <tr><td>409</td><td>Conflit : numéro de catway ou e-mail déjà utilisé, créneau déjà réservé</td></tr>
+            <tr><td>500</td><td>Erreur interne du serveur</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Toute erreur renvoie un objet de la forme <code>{ "error": "message", "details": [] }</code>.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="tutoriel">
+      <h2>2. Tutoriel</h2>
+      <p>Ce tutoriel enregistre une réservation de bout en bout, d'abord avec l'interface web, puis avec l'API.</p>
+
+      <h3>Avec l'interface web</h3>
+      <ol>
+        <li>Sur la <a href="/">page d'accueil</a>, saisissez votre e-mail et votre mot de passe puis cliquez sur « Se connecter ». Vous arrivez sur le tableau de bord.</li>
+        <li>Cliquez sur « Voir la liste des catways » et choisissez un catway libre, par exemple le n°4.</li>
+        <li>Revenez au tableau de bord. Dans « Enregistrer une réservation », indiquez le numéro du catway, le nom du client, celui du bateau, puis les dates d'arrivée et de départ.</li>
+        <li>Cliquez sur « Enregistrer » : la réservation créée s'affiche sous le formulaire, avec son identifiant.</li>
+        <li>Ouvrez la « liste des réservations » : la nouvelle réservation y figure. Le lien « Détails » ouvre sa page.</li>
+      </ol>
+
+      <h3>Avec l'API (curl)</h3>
+      <ol>
+        <li>
+          <p>Connectez-vous et gardez le jeton reçu :</p>
+<pre><code>curl -X POST <%= baseUrl %>/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"capitainerie@port-russell.fr","password":"votre-mot-de-passe"}'</code></pre>
+        </li>
+        <li>
+          <p>Vérifiez que le catway existe :</p>
+<pre><code>curl <%= baseUrl %>/catways/4 -H "Authorization: Bearer &lt;jeton&gt;"</code></pre>
+        </li>
+        <li>
+          <p>Créez la réservation :</p>
+<pre><code>curl -X POST <%= baseUrl %>/catways/4/reservations \
+  -H "Authorization: Bearer &lt;jeton&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"clientName":"Jeanne Dupont","boatName":"Mistral","checkIn":"2026-11-02","checkOut":"2026-11-09"}'</code></pre>
+        </li>
+        <li>L'API répond <code>201 Created</code> avec la réservation et son identifiant <code>_id</code>.</li>
+      </ol>
+      <p>
+        Si le catway est déjà réservé sur la période, l'API répond <code>409 Conflict</code> ;
+        si la date de départ précède la date d'arrivée, elle répond <code>400 Bad Request</code>.
+      </p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="exemples">
+      <h2>3. Exemples</h2>
+
+      <h3>Connexion</h3>
+<pre><code>POST /login
+Content-Type: application/json
+
+{ "email": "capitainerie@port-russell.fr", "password": "••••••••" }</code></pre>
+      <p>Réponse <code>200</code> :</p>
+<pre><code>{
+  "message": "Connexion réussie.",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+  "user": { "_id": "6710c0f2a1b2c3d4e5f60718", "name": "Capitainerie", "email": "capitainerie@port-russell.fr" }
+}</code></pre>
+
+      <h3>Lister les catways</h3>
+<pre><code>GET /catways</code></pre>
+      <p>Réponse <code>200</code> :</p>
+<pre><code>[
+  { "_id": "6710c0f2a1b2c3d4e5f60001", "catwayNumber": 1, "type": "short", "catwayState": "bon état" },
+  { "_id": "6710c0f2a1b2c3d4e5f60002", "catwayNumber": 2, "type": "short", "catwayState": "bon état" }
+]</code></pre>
+
+      <h3>Créer un catway</h3>
+<pre><code>POST /catways
+Content-Type: application/json
+
+{ "catwayNumber": 25, "type": "long", "catwayState": "neuf" }</code></pre>
+      <p>Réponse <code>201</code> : le catway créé. Si le numéro 25 existe déjà, réponse <code>409</code> :</p>
+<pre><code>{ "error": "Le catway n°25 existe déjà.", "details": [] }</code></pre>
+
+      <h3>Remplacer un catway (PUT)</h3>
+<pre><code>PUT /catways/25
+Content-Type: application/json
+
+{ "type": "short", "catwayState": "planches à remplacer" }</code></pre>
+      <p>Tous les champs sont obligatoires ; sinon réponse <code>400</code>.</p>
+
+      <h3>Modifier l'état d'un catway (PATCH)</h3>
+<pre><code>PATCH /catways/25
+Content-Type: application/json
+
+{ "catwayState": "réparé le 15/10" }</code></pre>
+      <p>Réponse <code>200</code> : <code>{ "catwayNumber": 25, "type": "short", "catwayState": "réparé le 15/10", … }</code></p>
+
+      <h3>Supprimer un catway</h3>
+<pre><code>DELETE /catways/25</code></pre>
+      <p>Réponse <code>200</code> : <code>{ "message": "Catway n°25 supprimé.", "catway": { … }, "deletedReservations": 0 }</code></p>
+
+      <h3>Prendre une réservation</h3>
+<pre><code>POST /catways/4/reservations
+Content-Type: application/json
+
+{ "clientName": "Jeanne Dupont", "boatName": "Mistral", "checkIn": "2026-11-02", "checkOut": "2026-11-09" }</code></pre>
+      <p>Réponse <code>201</code> :</p>
+<pre><code>{
+  "_id": "6710c5e9a1b2c3d4e5f60999",
+  "catwayNumber": 4,
+  "clientName": "Jeanne Dupont",
+  "boatName": "Mistral",
+  "checkIn": "2026-11-02T00:00:00.000Z",
+  "checkOut": "2026-11-09T00:00:00.000Z"
+}</code></pre>
+
+      <h3>Lister, consulter et supprimer des réservations</h3>
+<pre><code>GET    /catways/4/reservations
+GET    /catways/4/reservations/6710c5e9a1b2c3d4e5f60999
+DELETE /catways/4/reservations/6710c5e9a1b2c3d4e5f60999</code></pre>
+
+      <h3>Gérer les utilisateurs</h3>
+<pre><code>POST /users
+{ "name": "Agent du port", "email": "agent@port-russell.fr", "password": "au-moins-8-caracteres" }
+
+PUT /users/6710c0f2a1b2c3d4e5f60718
+{ "name": "Nouveau nom" }
+
+DELETE /users/6710c0f2a1b2c3d4e5f60718</code></pre>
+      <p>Le mot de passe est haché avec bcrypt et n'est jamais renvoyé par l'API.</p>
+
+      <h3>Accès sans être connecté</h3>
+<pre><code>GET /catways        (sans cookie ni jeton)</code></pre>
+      <p>Réponse <code>401</code> : <code>{ "error": "Session absente ou expirée : veuillez vous connecter.", "details": [] }</code></p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="glossaire">
+      <h2>4. Glossaire</h2>
+      <dl class="glossary">
+        <dt>API REST</dt>
+        <dd>Interface de programmation où chaque ressource a une adresse (URL) et où la méthode HTTP indique l'action à effectuer.</dd>
+        <dt>Catway</dt>
+        <dd>Petit appontement où s'amarre un bateau. Il a un numéro unique (<code>catwayNumber</code>), un type et un état.</dd>
+        <dt>catwayNumber</dt>
+        <dd>Numéro du catway, entier positif et unique ; il sert d'identifiant <code>:id</code> dans les routes.</dd>
+        <dt>catwayState</dt>
+        <dd>Description libre de l'état du catway (« bon état », « planches à remplacer »…).</dd>
+        <dt>Type (long / short)</dt>
+        <dd>Longueur du catway : <code>long</code> pour les grands bateaux, <code>short</code> pour les petits.</dd>
+        <dt>Réservation</dt>
+        <dd>Occupation d'un catway par un bateau entre deux dates. C'est une sous-ressource du catway.</dd>
+        <dt>checkIn / checkOut</dt>
+        <dd>Dates de début et de fin de la réservation, au format ISO 8601 (par exemple <code>2026-11-02</code>).</dd>
+        <dt>Capitainerie</dt>
+        <dd>Bureau qui gère le port ; ses agents sont les utilisateurs de l'application.</dd>
+        <dt>JWT (JSON Web Token)</dt>
+        <dd>Jeton signé remis à la connexion, qui prouve l'identité de l'utilisateur sans renvoyer son mot de passe.</dd>
+        <dt>Cookie httpOnly</dt>
+        <dd>Cookie que le navigateur envoie automatiquement au serveur mais que le JavaScript de la page ne peut pas lire.</dd>
+        <dt>Middleware</dt>
+        <dd>Fonction exécutée avant le traitement d'une route ; ici, le middleware d'authentification bloque les visiteurs non connectés.</dd>
+        <dt>Ressource / sous-ressource</dt>
+        <dd>Entité exposée par l'API. Une réservation dépend d'un catway : son adresse commence donc par celle du catway.</dd>
+        <dt>Méthodes HTTP</dt>
+        <dd><code>GET</code> lire, <code>POST</code> créer, <code>PUT</code> remplacer entièrement, <code>PATCH</code> modifier en partie, <code>DELETE</code> supprimer.</dd>
+        <dt>MongoDB / Mongoose</dt>
+        <dd>Base de données orientée documents, et bibliothèque Node.js qui en décrit les modèles et valide les données.</dd>
+      </dl>
+    </section>
+  </article>
+</div>
+<%- include('partials/foot') %>
