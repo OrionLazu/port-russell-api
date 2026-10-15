@@ -1,0 +1,28 @@
+<%- include('partials/head') %>
+<nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="/tableau-de-bord">Tableau de bord</a> › Réservations</nav>
+<h1><%= title %></h1>
+<p><%= reservations.length %> réservation(s).</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th scope="col">Catway</th><th scope="col">Client</th><th scope="col">Bateau</th><th scope="col">Arrivée</th><th scope="col">Départ</th><th scope="col">Identifiant</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+    </thead>
+    <tbody>
+      <% reservations.forEach((r) => { %>
+        <tr>
+          <td><a href="/catways/<%= r.catwayNumber %>">n°<%= r.catwayNumber %></a></td>
+          <td><%= r.clientName %></td>
+          <td><%= r.boatName %></td>
+          <td><%= formatDate(r.checkIn) %></td>
+          <td><%= formatDate(r.checkOut) %></td>
+          <td><code><%= r._id %></code></td>
+          <td><a href="/catways/<%= r.catwayNumber %>/reservations/<%= r._id %>">Détails</a></td>
+        </tr>
+      <% }) %>
+      <% if (!reservations.length) { %>
+        <tr><td colspan="7">Aucune réservation pour le moment.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('partials/foot') %>

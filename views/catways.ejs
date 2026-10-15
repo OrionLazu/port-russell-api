@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="/tableau-de-bord">Tableau de bord</a> › Catways</nav>
+<h1>Liste des catways</h1>
+<p><%= catways.length %> catway(s) enregistré(s).</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th scope="col">N°</th><th scope="col">Type</th><th scope="col">État</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+    </thead>
+    <tbody>
+      <% catways.forEach((c) => { %>
+        <tr>
+          <td><strong><%= c.catwayNumber %></strong></td>
+          <td><span class="badge badge-<%= c.type %>"><%= c.type %></span></td>
+          <td><%= c.catwayState %></td>
+          <td><a href="/catways/<%= c.catwayNumber %>">Détails</a></td>
+        </tr>
+      <% }) %>
+      <% if (!catways.length) { %>
+        <tr><td colspan="4">Aucun catway pour le moment.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('partials/foot') %>
