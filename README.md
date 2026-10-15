@@ -3,9 +3,12 @@
 API REST privée de gestion des **catways** (petits appontements) et de leurs **réservations**
 pour la capitainerie du port de plaisance Russell.
 
-- **Application en ligne :** _lien ajouté après le déploiement_
-- **Documentation de l'API :** page `/documentation` de l'application
-- **Documentation technique (JSDoc) :** page `/jsdoc/index.html` de l'application
+- **Application en ligne :** https://port-russell-api-b6xw.onrender.com
+- **Documentation de l'API :** https://port-russell-api-b6xw.onrender.com/documentation
+- **Documentation technique (JSDoc) :** https://port-russell-api-b6xw.onrender.com/jsdoc/index.html
+
+> L'hébergement gratuit de Render met le service en veille après 15 minutes d'inactivité :
+> le premier chargement peut prendre une minute environ.
 
 ## Fonctionnalités
 
