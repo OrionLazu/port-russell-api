@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>API du port de plaisance Russell</h1>
+<p>API REST privée de gestion des <strong>catways</strong> (petits appontements) et de leurs <strong>réservations</strong>
+pour la capitainerie du port de plaisance Russell.</p>
+<ul>
+<li><strong>Application en ligne :</strong> <em>lien ajouté après le déploiement</em></li>
+<li><strong>Documentation de l'API :</strong> page <code>/documentation</code> de l'application</li>
+<li><strong>Documentation technique (JSDoc) :</strong> page <code>/jsdoc/index.html</code> de l'application</li>
+</ul>
+<h2>Fonctionnalités</h2>
+<table>
+<thead>
+<tr>
+<th>N°</th>
+<th>Fonctionnalité</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Créer un catway</td>
+<td><code>POST /catways</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Lister l'ensemble des catways</td>
+<td><code>GET /catways</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Récupérer les détails d'un catway</td>
+<td><code>GET /catways/:id</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Modifier la description de l'état d'un catway</td>
+<td><code>PATCH /catways/:id</code> (ou <code>PUT</code> pour tout remplacer)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Supprimer un catway</td>
+<td><code>DELETE /catways/:id</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Prendre la réservation d'un catway</td>
+<td><code>POST /catways/:id/reservations</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Supprimer une réservation</td>
+<td><code>DELETE /catways/:id/reservations/:idReservation</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Lister l'ensemble des réservations</td>
+<td><code>GET /catways/:id/reservations</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Afficher les détails d'une réservation</td>
+<td><code>GET /catways/:id/reservations/:idReservation</code></td>
+</tr>
+</tbody>
+</table>
+<p>S'y ajoutent la connexion (<code>POST /login</code>, <code>GET /logout</code>) et la gestion des utilisateurs
+(<code>GET</code>, <code>POST /users</code>, <code>GET</code>, <code>PUT</code>, <code>DELETE /users/:id</code>). Toutes les routes de données sont
+protégées par un middleware d'authentification (jeton JWT dans un cookie <code>httpOnly</code>
+ou dans l'en-tête <code>Authorization: Bearer</code>).</p>
+<p>Le paramètre <code>:id</code> d'un catway est son numéro (<code>catwayNumber</code>).</p>
+<h2>Pages</h2>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td>Accueil : présentation, formulaire de connexion, lien vers la documentation</td>
+</tr>
+<tr>
+<td><code>/tableau-de-bord</code></td>
+<td>Tableau de bord : formulaires utilisateurs, catways et réservations</td>
+</tr>
+<tr>
+<td><code>/catways</code></td>
+<td>Liste des catways</td>
+</tr>
+<tr>
+<td><code>/catways/:id</code></td>
+<td>Détails d'un catway et de ses réservations</td>
+</tr>
+<tr>
+<td><code>/reservations</code></td>
+<td>Liste des réservations</td>
+</tr>
+<tr>
+<td><code>/catways/:id/reservations/:idReservation</code></td>
+<td>Détails d'une réservation</td>
+</tr>
+<tr>
+<td><code>/documentation</code></td>
+<td>Documentation de l'API (vue d'ensemble, tutoriel, exemples, glossaire)</td>
+</tr>
+</tbody>
+</table>
+<p>Les routes <code>/catways…</code> répondent en HTML à un navigateur et en JSON à un client d'API
+(négociation de contenu sur l'en-tête <code>Accept</code>).</p>
+<h2>Technologies</h2>
+<p>Node.js 22+, Express 5, MongoDB avec Mongoose, EJS, JSON Web Token, bcrypt,
+Mocha et Supertest pour les tests, JSDoc pour la documentation du code.</p>
+<h2>Organisation du code</h2>
+<pre class="prettyprint source"><code>├── app.js               Application Express (middlewares, routes)
+├── server.js            Démarrage : MongoDB, serveur HTTP, puis tests
+├── config/              Connexion à MongoDB
+├── models/              Modèles Mongoose : Catway, Reservation, User
+├── services/            Logique métier (aucun req, res ni code HTTP)
+├── controllers/         Traduction HTTP ↔ services
+├── routes/              Déclaration des routes
+├── middlewares/         Authentification et gestion des erreurs
+├── views/               Pages EJS
+├── public/              CSS, JavaScript du tableau de bord, icône
+├── tests/               Tests Mocha
+├── docs/                Documentation JSDoc générée
+├── scripts/seed.js      Import des données de départ
+└── data/                catways.json et reservations.json fournis
+</code></pre>
+<p>Les services ne reçoivent jamais les objets <code>req</code> et <code>res</code> et ne manipulent aucun code
+d'état HTTP : ils lèvent des erreurs métier (<code>VALIDATION</code>, <code>NOT_FOUND</code>, <code>CONFLICT</code>…)
+que le middleware <code>errorHandler</code> traduit en codes HTTP.</p>
+<h2>Installation en local</h2>
+<p>Prérequis : Node.js 22 ou plus et une base MongoDB (Atlas ou locale).</p>
+<pre class="prettyprint source lang-bash"><code>git clone https://github.com/OrionLazu/port-russell-api.git
+cd port-russell-api
+npm install
+cp .env.example .env      # puis compléter les valeurs
+npm run seed              # importe les catways, les réservations et crée le compte
+npm start
+</code></pre>
+<p>L'application est alors disponible sur http://localhost:3000.</p>
+<h3>Variables d'environnement</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MONGODB_URI</code></td>
+<td>Chaîne de connexion à la base de l'application</td>
+</tr>
+<tr>
+<td><code>MONGODB_URI_TEST</code></td>
+<td>Base dédiée aux tests (facultatif : sinon base en mémoire)</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>Secret de signature des jetons</td>
+</tr>
+<tr>
+<td><code>JWT_EXPIRES_IN</code></td>
+<td>Durée de validité du jeton (par défaut <code>24h</code>)</td>
+</tr>
+<tr>
+<td><code>ADMIN_NAME</code>, <code>ADMIN_EMAIL</code>, <code>ADMIN_PASSWORD</code></td>
+<td>Compte créé par <code>npm run seed</code></td>
+</tr>
+<tr>
+<td><code>RUN_TESTS_ON_START</code></td>
+<td><code>false</code> pour ne pas lancer les tests au démarrage</td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>Port d'écoute (3000 par défaut)</td>
+</tr>
+</tbody>
+</table>
+<h2>Tests</h2>
+<pre class="prettyprint source lang-bash"><code>npm test
+</code></pre>
+<p>Les tests s'exécutent aussi <strong>automatiquement au lancement de l'application</strong> (<code>npm start</code>) :
+leurs résultats s'affichent dans la console du serveur. Ils utilisent une base séparée,
+jamais la base de l'application.</p>
+<ul>
+<li><code>tests/catways.test.js</code> : fonctionnalités 1 à 5</li>
+<li><code>tests/reservations.test.js</code> : fonctionnalités 6 à 9</li>
+<li><code>tests/users.test.js</code> : utilisateurs et authentification</li>
+<li><code>tests/api.test.js</code> : routes HTTP, middleware d'authentification, parcours complet</li>
+</ul>
+<h2>Documentation du code</h2>
+<pre class="prettyprint source lang-bash"><code>npm run docs
+</code></pre>
+<p>Génère la documentation JSDoc dans <code>docs/jsdoc</code>, servie par l'application sur <code>/jsdoc</code>.</p>
+<h2>Auteur</h2>
+<p>Mohamed IDJEDAINI — devoir CEF « Créer une API pour le port de plaisance Russell ».</p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-config_db.html">config/db</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_catwayController.html">controllers/catwayController</a></li><li><a href="module-controllers_pageController.html">controllers/pageController</a></li><li><a href="module-controllers_reservationController.html">controllers/reservationController</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-middlewares_auth.html">middlewares/auth</a></li><li><a href="module-middlewares_errorHandler.html">middlewares/errorHandler</a></li><li><a href="module-models_Catway.html">models/Catway</a></li><li><a href="module-models_Reservation.html">models/Reservation</a></li><li><a href="module-models_User.html">models/User</a></li><li><a href="module-routes_catways.html">routes/catways</a></li><li><a href="module-routes_pages.html">routes/pages</a></li><li><a href="module-routes_reservations.html">routes/reservations</a></li><li><a href="module-routes_users.html">routes/users</a></li><li><a href="module-scripts_seed.html">scripts/seed</a></li><li><a href="module-server.html">server</a></li><li><a href="module-services_catwayService.html">services/catwayService</a></li><li><a href="module-services_errors.html">services/errors</a></li><li><a href="module-services_reservationService.html">services/reservationService</a></li><li><a href="module-services_userService.html">services/userService</a></li><li><a href="module-tests_setup.html">tests/setup</a></li></ul><h3>Classes</h3><ul><li><a href="module-services_errors-ServiceError.html">ServiceError</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

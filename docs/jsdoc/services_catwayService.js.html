@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/catwayService.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/catwayService.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file Logique métier des catways.
+ * @module services/catwayService
+ */
+
+const Catway = require('../models/Catway');
+const Reservation = require('../models/Reservation');
+const { ErrorKind, ServiceError, fromMongooseError } = require('./errors');
+
+/**
+ * Convertit et contrôle un numéro de catway.
+ *
+ * @param {*} value - Valeur reçue (chaîne ou nombre).
+ * @returns {number} Le numéro sous forme d'entier positif.
+ * @throws {ServiceError} Si la valeur n'est pas un entier positif.
+ */
+function parseCatwayNumber(value) {
+  const number = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  if (!Number.isInteger(number) || number &lt; 1) {
+    throw new ServiceError(ErrorKind.VALIDATION, 'Le numéro du catway doit être un entier positif.');
+  }
+  return number;
+}
+
+/**
+ * Ne garde que les champs modifiables d'un catway, convertis en chaîne.
+ *
+ * @param {Object} data - Données reçues.
+ * @returns {{type: (string|undefined), catwayState: (string|undefined)}} Champs retenus.
+ */
+function pickEditableFields(data = {}) {
+  const fields = {};
+  if (data.type !== undefined) fields.type = String(data.type).trim();
+  if (data.catwayState !== undefined) fields.catwayState = String(data.catwayState).trim();
+  return fields;
+}
+
+/**
+ * Liste tous les catways, triés par numéro.
+ *
+ * @returns {Promise&lt;Array&lt;Object>>} Les catways.
+ */
+async function listCatways() {
+  return Catway.find().sort({ catwayNumber: 1 }).lean();
+}
+
+/**
+ * Récupère un catway par son numéro.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway.
+ * @returns {Promise&lt;Object>} Le catway trouvé.
+ * @throws {ServiceError} NOT_FOUND si le catway n'existe pas.
+ */
+async function getCatway(catwayNumber) {
+  const number = parseCatwayNumber(catwayNumber);
+  const catway = await Catway.findOne({ catwayNumber: number }).lean();
+  if (!catway) {
+    throw new ServiceError(ErrorKind.NOT_FOUND, `Le catway n°${number} n'existe pas.`);
+  }
+  return catway;
+}
+
+/**
+ * Crée un catway.
+ *
+ * @param {{catwayNumber: (number|string), type: string, catwayState: string}} data - Données du catway.
+ * @returns {Promise&lt;Object>} Le catway créé.
+ * @throws {ServiceError} VALIDATION si les données sont invalides, CONFLICT si le numéro existe déjà.
+ */
+async function createCatway(data = {}) {
+  const catwayNumber = parseCatwayNumber(data.catwayNumber);
+  if (await Catway.exists({ catwayNumber })) {
+    throw new ServiceError(ErrorKind.CONFLICT, `Le catway n°${catwayNumber} existe déjà.`);
+  }
+  try {
+    const catway = await Catway.create({ catwayNumber, ...pickEditableFields(data) });
+    return catway.toObject();
+  } catch (error) {
+    throw fromMongooseError(error);
+  }
+}
+
+/**
+ * Remplace entièrement un catway (méthode PUT).
+ * Le numéro ne peut pas être modifié : c'est l'identifiant de la ressource.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway à remplacer.
+ * @param {{type: string, catwayState: string, catwayNumber: ((number|string)|undefined)}} data - Nouvelles données complètes.
+ * @returns {Promise&lt;Object>} Le catway mis à jour.
+ * @throws {ServiceError} VALIDATION si un champ manque, NOT_FOUND si le catway n'existe pas.
+ */
+async function replaceCatway(catwayNumber, data = {}) {
+  const number = parseCatwayNumber(catwayNumber);
+  if (data.catwayNumber !== undefined &amp;&amp; parseCatwayNumber(data.catwayNumber) !== number) {
+    throw new ServiceError(ErrorKind.VALIDATION, 'Le numéro du catway ne peut pas être modifié.');
+  }
+  const fields = pickEditableFields(data);
+  const missing = ['type', 'catwayState'].filter((key) => !fields[key]);
+  if (missing.length) {
+    throw new ServiceError(
+      ErrorKind.VALIDATION,
+      'La méthode PUT remplace tout le catway : tous les champs sont obligatoires.',
+      missing.map((key) => `Le champ « ${key} » est manquant.`)
+    );
+  }
+  return updateCatwayFields(number, fields);
+}
+
+/**
+ * Modifie partiellement un catway (méthode PATCH),
+ * typiquement la description de son état.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway.
+ * @param {{type: (string|undefined), catwayState: (string|undefined)}} data - Champs à modifier.
+ * @returns {Promise&lt;Object>} Le catway mis à jour.
+ * @throws {ServiceError} VALIDATION si aucun champ n'est fourni, NOT_FOUND si le catway n'existe pas.
+ */
+async function updateCatway(catwayNumber, data = {}) {
+  const number = parseCatwayNumber(catwayNumber);
+  if (data.catwayNumber !== undefined &amp;&amp; parseCatwayNumber(data.catwayNumber) !== number) {
+    throw new ServiceError(ErrorKind.VALIDATION, 'Le numéro du catway ne peut pas être modifié.');
+  }
+  const fields = pickEditableFields(data);
+  if (!Object.keys(fields).length) {
+    throw new ServiceError(ErrorKind.VALIDATION, 'Aucun champ à modifier (type ou catwayState).');
+  }
+  return updateCatwayFields(number, fields);
+}
+
+/**
+ * Applique des modifications validées à un catway.
+ *
+ * @private
+ * @param {number} catwayNumber - Numéro du catway.
+ * @param {Object} fields - Champs à écrire.
+ * @returns {Promise&lt;Object>} Le catway mis à jour.
+ */
+async function updateCatwayFields(catwayNumber, fields) {
+  try {
+    const catway = await Catway.findOneAndUpdate({ catwayNumber }, fields, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+    if (!catway) {
+      throw new ServiceError(ErrorKind.NOT_FOUND, `Le catway n°${catwayNumber} n'existe pas.`);
+    }
+    return catway;
+  } catch (error) {
+    throw fromMongooseError(error);
+  }
+}
+
+/**
+ * Supprime un catway ainsi que ses réservations.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway.
+ * @returns {Promise&lt;{catway: Object, deletedReservations: number}>} Le catway supprimé et le nombre de réservations supprimées.
+ * @throws {ServiceError} NOT_FOUND si le catway n'existe pas.
+ */
+async function deleteCatway(catwayNumber) {
+  const number = parseCatwayNumber(catwayNumber);
+  const catway = await Catway.findOneAndDelete({ catwayNumber: number }).lean();
+  if (!catway) {
+    throw new ServiceError(ErrorKind.NOT_FOUND, `Le catway n°${number} n'existe pas.`);
+  }
+  const { deletedCount } = await Reservation.deleteMany({ catwayNumber: number });
+  return { catway, deletedReservations: deletedCount };
+}
+
+module.exports = {
+  parseCatwayNumber,
+  listCatways,
+  getCatway,
+  createCatway,
+  replaceCatway,
+  updateCatway,
+  deleteCatway,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-config_db.html">config/db</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_catwayController.html">controllers/catwayController</a></li><li><a href="module-controllers_pageController.html">controllers/pageController</a></li><li><a href="module-controllers_reservationController.html">controllers/reservationController</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-middlewares_auth.html">middlewares/auth</a></li><li><a href="module-middlewares_errorHandler.html">middlewares/errorHandler</a></li><li><a href="module-models_Catway.html">models/Catway</a></li><li><a href="module-models_Reservation.html">models/Reservation</a></li><li><a href="module-models_User.html">models/User</a></li><li><a href="module-routes_catways.html">routes/catways</a></li><li><a href="module-routes_pages.html">routes/pages</a></li><li><a href="module-routes_reservations.html">routes/reservations</a></li><li><a href="module-routes_users.html">routes/users</a></li><li><a href="module-scripts_seed.html">scripts/seed</a></li><li><a href="module-server.html">server</a></li><li><a href="module-services_catwayService.html">services/catwayService</a></li><li><a href="module-services_errors.html">services/errors</a></li><li><a href="module-services_reservationService.html">services/reservationService</a></li><li><a href="module-services_userService.html">services/userService</a></li><li><a href="module-tests_setup.html">tests/setup</a></li></ul><h3>Classes</h3><ul><li><a href="module-services_errors-ServiceError.html">ServiceError</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

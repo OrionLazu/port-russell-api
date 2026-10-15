@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/userService.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/userService.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file Logique métier des utilisateurs de la capitainerie et de l'authentification.
+ * @module services/userService
+ */
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const { ErrorKind, ServiceError, fromMongooseError, assertObjectId } = require('./errors');
+
+/** Longueur minimale d'un mot de passe. */
+const PASSWORD_MIN_LENGTH = 8;
+/** Coût du hachage bcrypt. */
+const SALT_ROUNDS = 10;
+
+/**
+ * Contrôle un mot de passe puis le hache.
+ *
+ * @param {*} password - Mot de passe en clair.
+ * @returns {Promise&lt;string>} Le mot de passe haché.
+ * @throws {ServiceError} Si le mot de passe est trop court.
+ */
+async function hashPassword(password) {
+  if (typeof password !== 'string' || password.length &lt; PASSWORD_MIN_LENGTH) {
+    throw new ServiceError(
+      ErrorKind.VALIDATION,
+      `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`
+    );
+  }
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+/**
+ * Lit la configuration JWT.
+ *
+ * @private
+ * @returns {{secret: string, expiresIn: string}} Secret et durée de validité.
+ */
+function jwtConfig() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('La variable JWT_SECRET est manquante.');
+  }
+  return { secret, expiresIn: process.env.JWT_EXPIRES_IN || '24h' };
+}
+
+/**
+ * Liste les utilisateurs (sans mot de passe).
+ *
+ * @returns {Promise&lt;Array&lt;Object>>} Les utilisateurs.
+ */
+async function listUsers() {
+  return User.find().sort({ name: 1 }).lean();
+}
+
+/**
+ * Récupère un utilisateur par son identifiant.
+ *
+ * @param {string} id - Identifiant de l'utilisateur.
+ * @returns {Promise&lt;Object>} L'utilisateur trouvé.
+ * @throws {ServiceError} NOT_FOUND si l'utilisateur n'existe pas.
+ */
+async function getUser(id) {
+  assertObjectId(id, "de l'utilisateur");
+  const user = await User.findById(id).lean();
+  if (!user) {
+    throw new ServiceError(ErrorKind.NOT_FOUND, "Cet utilisateur n'existe pas.");
+  }
+  return user;
+}
+
+/**
+ * Crée un utilisateur.
+ *
+ * @param {{name: string, email: string, password: string}} data - Données de l'utilisateur.
+ * @returns {Promise&lt;Object>} L'utilisateur créé, sans son mot de passe.
+ * @throws {ServiceError} VALIDATION ou CONFLICT (e-mail déjà utilisé).
+ */
+async function createUser(data = {}) {
+  const password = await hashPassword(data.password);
+  try {
+    const user = await User.create({
+      name: data.name === undefined ? undefined : String(data.name),
+      email: data.email === undefined ? undefined : String(data.email),
+      password,
+    });
+    return user.toJSON();
+  } catch (error) {
+    throw fromMongooseError(error);
+  }
+}
+
+/**
+ * Modifie un utilisateur. Seuls les champs fournis sont modifiés.
+ *
+ * @param {string} id - Identifiant de l'utilisateur.
+ * @param {{name: (string|undefined), email: (string|undefined), password: (string|undefined)}} data - Champs à modifier.
+ * @returns {Promise&lt;Object>} L'utilisateur mis à jour.
+ * @throws {ServiceError} VALIDATION, NOT_FOUND ou CONFLICT.
+ */
+async function updateUser(id, data = {}) {
+  assertObjectId(id, "de l'utilisateur");
+  const fields = {};
+  if (data.name) fields.name = String(data.name);
+  if (data.email) fields.email = String(data.email);
+  if (data.password) fields.password = await hashPassword(data.password);
+  if (!Object.keys(fields).length) {
+    throw new ServiceError(ErrorKind.VALIDATION, 'Aucun champ à modifier (name, email ou password).');
+  }
+  try {
+    const user = await User.findByIdAndUpdate(id, fields, { returnDocument: 'after', runValidators: true }).lean();
+    if (!user) {
+      throw new ServiceError(ErrorKind.NOT_FOUND, "Cet utilisateur n'existe pas.");
+    }
+    return user;
+  } catch (error) {
+    throw fromMongooseError(error);
+  }
+}
+
+/**
+ * Supprime un utilisateur. Un utilisateur ne peut pas supprimer son propre
+ * compte, afin que la capitainerie garde toujours au moins un accès.
+ *
+ * @param {string} id - Identifiant de l'utilisateur à supprimer.
+ * @param {string} [currentUserId] - Identifiant de l'utilisateur connecté.
+ * @returns {Promise&lt;Object>} L'utilisateur supprimé.
+ * @throws {ServiceError} FORBIDDEN (suppression de soi-même) ou NOT_FOUND.
+ */
+async function deleteUser(id, currentUserId) {
+  assertObjectId(id, "de l'utilisateur");
+  if (currentUserId &amp;&amp; String(currentUserId) === id) {
+    throw new ServiceError(ErrorKind.FORBIDDEN, 'Vous ne pouvez pas supprimer votre propre compte.');
+  }
+  const user = await User.findByIdAndDelete(id).lean();
+  if (!user) {
+    throw new ServiceError(ErrorKind.NOT_FOUND, "Cet utilisateur n'existe pas.");
+  }
+  delete user.password;
+  return user;
+}
+
+/**
+ * Vérifie les identifiants d'un utilisateur et lui délivre un jeton JWT.
+ *
+ * @param {string} email - Adresse e-mail.
+ * @param {string} password - Mot de passe en clair.
+ * @returns {Promise&lt;{token: string, user: Object}>} Le jeton et l'utilisateur connecté.
+ * @throws {ServiceError} UNAUTHENTICATED si les identifiants sont incorrects.
+ */
+async function authenticate(email, password) {
+  const invalid = new ServiceError(ErrorKind.UNAUTHENTICATED, 'E-mail ou mot de passe incorrect.');
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+    throw invalid;
+  }
+  const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    throw invalid;
+  }
+  const { secret, expiresIn } = jwtConfig();
+  const token = jwt.sign({ sub: user.id, name: user.name, email: user.email }, secret, { expiresIn });
+  return { token, user: user.toJSON() };
+}
+
+/**
+ * Vérifie un jeton JWT et renvoie l'utilisateur correspondant.
+ *
+ * @param {string} token - Jeton à vérifier.
+ * @returns {Promise&lt;Object>} L'utilisateur associé au jeton.
+ * @throws {ServiceError} UNAUTHENTICATED si le jeton est invalide, expiré ou si l'utilisateur n'existe plus.
+ */
+async function verifyToken(token) {
+  const unauthenticated = new ServiceError(
+    ErrorKind.UNAUTHENTICATED,
+    'Session absente ou expirée : veuillez vous connecter.'
+  );
+  if (!token) throw unauthenticated;
+  let payload;
+  try {
+    payload = jwt.verify(token, jwtConfig().secret);
+  } catch {
+    throw unauthenticated;
+  }
+  const user = await User.findById(payload.sub).lean();
+  if (!user) throw unauthenticated;
+  return user;
+}
+
+module.exports = {
+  PASSWORD_MIN_LENGTH,
+  hashPassword,
+  listUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser,
+  authenticate,
+  verifyToken,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-config_db.html">config/db</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_catwayController.html">controllers/catwayController</a></li><li><a href="module-controllers_pageController.html">controllers/pageController</a></li><li><a href="module-controllers_reservationController.html">controllers/reservationController</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-middlewares_auth.html">middlewares/auth</a></li><li><a href="module-middlewares_errorHandler.html">middlewares/errorHandler</a></li><li><a href="module-models_Catway.html">models/Catway</a></li><li><a href="module-models_Reservation.html">models/Reservation</a></li><li><a href="module-models_User.html">models/User</a></li><li><a href="module-routes_catways.html">routes/catways</a></li><li><a href="module-routes_pages.html">routes/pages</a></li><li><a href="module-routes_reservations.html">routes/reservations</a></li><li><a href="module-routes_users.html">routes/users</a></li><li><a href="module-scripts_seed.html">scripts/seed</a></li><li><a href="module-server.html">server</a></li><li><a href="module-services_catwayService.html">services/catwayService</a></li><li><a href="module-services_errors.html">services/errors</a></li><li><a href="module-services_reservationService.html">services/reservationService</a></li><li><a href="module-services_userService.html">services/userService</a></li><li><a href="module-tests_setup.html">tests/setup</a></li></ul><h3>Classes</h3><ul><li><a href="module-services_errors-ServiceError.html">ServiceError</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/reservationService.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/reservationService.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file Logique métier des réservations (sous-ressource des catways).
+ * @module services/reservationService
+ */
+
+const mongoose = require('mongoose');
+const Reservation = require('../models/Reservation');
+const { getCatway, parseCatwayNumber } = require('./catwayService');
+const { ErrorKind, ServiceError, fromMongooseError, assertObjectId } = require('./errors');
+
+/**
+ * Convertit une valeur en date valide.
+ *
+ * @param {*} value - Valeur reçue.
+ * @param {string} label - Nom du champ, pour le message d'erreur.
+ * @returns {Date} La date convertie.
+ * @throws {ServiceError} Si la date est absente ou invalide.
+ */
+function parseDate(value, label) {
+  const date = value instanceof Date ? value : new Date(String(value ?? ''));
+  if (!value || Number.isNaN(date.getTime())) {
+    throw new ServiceError(ErrorKind.VALIDATION, `La date « ${label} » est absente ou invalide.`);
+  }
+  return date;
+}
+
+/**
+ * Liste les réservations, toutes ou celles d'un catway.
+ *
+ * @param {number|string} [catwayNumber] - Numéro du catway ; si absent, toutes les réservations.
+ * @returns {Promise&lt;Array&lt;Object>>} Les réservations, triées par date de début.
+ * @throws {ServiceError} NOT_FOUND si le catway demandé n'existe pas.
+ */
+async function listReservations(catwayNumber) {
+  const filter = {};
+  if (catwayNumber !== undefined) {
+    filter.catwayNumber = (await getCatway(catwayNumber)).catwayNumber;
+  }
+  return Reservation.find(filter).sort({ checkIn: 1, catwayNumber: 1 }).lean();
+}
+
+/**
+ * Récupère une réservation d'un catway.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway.
+ * @param {string} reservationId - Identifiant de la réservation.
+ * @returns {Promise&lt;Object>} La réservation trouvée.
+ * @throws {ServiceError} NOT_FOUND si la réservation n'existe pas pour ce catway.
+ */
+async function getReservation(catwayNumber, reservationId) {
+  const number = parseCatwayNumber(catwayNumber);
+  assertObjectId(reservationId, 'de la réservation');
+  const reservation = await Reservation.findOne({ _id: reservationId, catwayNumber: number }).lean();
+  if (!reservation) {
+    throw new ServiceError(
+      ErrorKind.NOT_FOUND,
+      `Aucune réservation ${reservationId} sur le catway n°${number}.`
+    );
+  }
+  return reservation;
+}
+
+/**
+ * Enregistre une réservation sur un catway existant,
+ * à condition qu'elle ne chevauche pas une réservation existante.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway réservé.
+ * @param {{clientName: string, boatName: string, checkIn: (string|Date), checkOut: (string|Date)}} data - Données de la réservation.
+ * @returns {Promise&lt;Object>} La réservation créée.
+ * @throws {ServiceError} VALIDATION, NOT_FOUND (catway inconnu) ou CONFLICT (créneau déjà pris).
+ */
+async function createReservation(catwayNumber, data = {}) {
+  const catway = await getCatway(catwayNumber);
+  const checkIn = parseDate(data.checkIn, 'checkIn');
+  const checkOut = parseDate(data.checkOut, 'checkOut');
+  if (checkOut &lt;= checkIn) {
+    throw new ServiceError(
+      ErrorKind.VALIDATION,
+      'La date de fin doit être postérieure à la date de début.'
+    );
+  }
+
+  // Les opérateurs écrits ici sont déclarés de confiance, car l'option
+  // sanitizeFilter neutralise par défaut tout opérateur dans un filtre.
+  const overlap = await Reservation.findOne({
+    catwayNumber: catway.catwayNumber,
+    checkIn: mongoose.trusted({ $lt: checkOut }),
+    checkOut: mongoose.trusted({ $gt: checkIn }),
+  }).lean();
+  if (overlap) {
+    throw new ServiceError(
+      ErrorKind.CONFLICT,
+      `Le catway n°${catway.catwayNumber} est déjà réservé sur cette période (bateau « ${overlap.boatName} »).`
+    );
+  }
+
+  try {
+    const reservation = await Reservation.create({
+      catwayNumber: catway.catwayNumber,
+      clientName: data.clientName === undefined ? undefined : String(data.clientName),
+      boatName: data.boatName === undefined ? undefined : String(data.boatName),
+      checkIn,
+      checkOut,
+    });
+    return reservation.toObject();
+  } catch (error) {
+    throw fromMongooseError(error);
+  }
+}
+
+/**
+ * Supprime une réservation d'un catway.
+ *
+ * @param {number|string} catwayNumber - Numéro du catway.
+ * @param {string} reservationId - Identifiant de la réservation.
+ * @returns {Promise&lt;Object>} La réservation supprimée.
+ * @throws {ServiceError} NOT_FOUND si la réservation n'existe pas pour ce catway.
+ */
+async function deleteReservation(catwayNumber, reservationId) {
+  const reservation = await getReservation(catwayNumber, reservationId);
+  await Reservation.deleteOne({ _id: reservation._id });
+  return reservation;
+}
+
+module.exports = {
+  listReservations,
+  getReservation,
+  createReservation,
+  deleteReservation,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-config_db.html">config/db</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_catwayController.html">controllers/catwayController</a></li><li><a href="module-controllers_pageController.html">controllers/pageController</a></li><li><a href="module-controllers_reservationController.html">controllers/reservationController</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-middlewares_auth.html">middlewares/auth</a></li><li><a href="module-middlewares_errorHandler.html">middlewares/errorHandler</a></li><li><a href="module-models_Catway.html">models/Catway</a></li><li><a href="module-models_Reservation.html">models/Reservation</a></li><li><a href="module-models_User.html">models/User</a></li><li><a href="module-routes_catways.html">routes/catways</a></li><li><a href="module-routes_pages.html">routes/pages</a></li><li><a href="module-routes_reservations.html">routes/reservations</a></li><li><a href="module-routes_users.html">routes/users</a></li><li><a href="module-scripts_seed.html">scripts/seed</a></li><li><a href="module-server.html">server</a></li><li><a href="module-services_catwayService.html">services/catwayService</a></li><li><a href="module-services_errors.html">services/errors</a></li><li><a href="module-services_reservationService.html">services/reservationService</a></li><li><a href="module-services_userService.html">services/userService</a></li><li><a href="module-tests_setup.html">tests/setup</a></li></ul><h3>Classes</h3><ul><li><a href="module-services_errors-ServiceError.html">ServiceError</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

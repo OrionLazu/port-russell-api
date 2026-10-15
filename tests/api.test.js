@@ -30,6 +30,12 @@ describe('API HTTP', () => {
       assert.match(res.text, /href="\/documentation"/);
     });
 
+    it('GET /documentation affiche les 4 parties de la documentation', async () => {
+      const res = await request(app).get('/documentation').expect(200);
+      ['vue-ensemble', 'tutoriel', 'exemples', 'glossaire'].forEach((id) => {
+        assert.match(res.text, new RegExp(`id="${id}"`));
+      });
+    });
   });
 
   describe('Middleware d’authentification', () => {
